@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { child, get, onValue, push, ref, set } from "firebase/database";
 import { database } from "./firebase.init";
+import { Link } from "react-router";
 
-interface Todo {
+export interface Todo {
   id: number;
   title: string;
   isCompleted: boolean;
@@ -24,28 +25,38 @@ function App() {
     const todoRef = push(ref(database, "/todos"));
 
     set(todoRef, {
-      id: todoRef.key,
       title,
       isCompleted: false,
-    }).then(() => {
-      alert("Todo is created successfully!")
-    }).catch((error: Error) => {
-      alert(`Error: ${error.message}!!`);
-    });
+    })
+      .then(() => {
+        alert("Todo is created successfully!");
+      })
+      .catch((error: Error) => {
+        alert(`Error: ${error.message}!!`);
+      });
   };
 
   // retrieve todos from db also get latest data based on data update to
   // the specified database location
   useEffect(() => {
-    const todosRef = ref(database, '/todos');
+    const todosRef = ref(database, "/todos");
 
     // event listener to the todosRef
     onValue(todosRef, (snapshot) => {
       // if there are data
-      if(snapshot.exists()) {
-        setTodos(Object.values(snapshot.val()));
+      if (snapshot.exists()) {
+        // get todos with unique ids
+        const todosWithUniqueIds = snapshot.val();
+
+        // grab the unique id for every todo and put it inside the todo
+        const todos = Object.keys(todosWithUniqueIds).map((id) => ({
+          id,
+          ...todosWithUniqueIds[id],
+        }));
+
+        setTodos(todos);
       }
-    })
+    });
   }, []);
 
   // fetch data only once without observer
@@ -72,9 +83,14 @@ function App() {
       {/* todos list */}
       <ul>
         {todos.map((todo) => (
-          <li key={todo.id} style={{ display: "flex", gap: "10px" }}>
-            <input type="checkbox" checked={todo.isCompleted} onChange={(e) => console.log(e.target.checked)} />
+          <li key={todo.id} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <input
+              type="checkbox"
+              checked={todo.isCompleted}
+              onChange={(e) => console.log(e.target.checked)}
+            />
             <p>{todo.title}</p>
+            <Link to={`/todos/edit/${todo.id}`}>Edit</Link>
           </li>
         ))}
       </ul>
