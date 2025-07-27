@@ -1,7 +1,7 @@
 import { onValue, ref, update } from "firebase/database";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { database } from "./firebase.init";
+import { database } from "./firebase";
 
 export default function Edit() {
   const { id } = useParams();

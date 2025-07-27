@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { child, get, onValue, push, ref, set, update } from "firebase/database";
-import { database } from "./firebase.init";
+import { database } from "./firebase";
 import { Link } from "react-router";
 
 export interface Todo {
