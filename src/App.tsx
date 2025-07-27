@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { onValue, push, ref, set } from "firebase/database";
+import { child, get, onValue, push, ref, set } from "firebase/database";
 import { database } from "./firebase.init";
 
 interface Todo {
   id: number;
   title: string;
+  isCompleted: boolean;
 }
 
 function App() {
@@ -15,9 +16,11 @@ function App() {
   // add new todo
   const addNew = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // setTodos((todos) => [...todos, { id: todos.length + 1, title }]);
+    // setTodos((todos) => [...todos, { id: todos.length + 1, title, isCompleted: false }]);
 
     // save to db
+    // push creates a new unique id for every todo after todos folder
+    // so its like /todos/:uid
     const todoRef = push(ref(database, "/todos"));
 
     set(todoRef, {
@@ -31,7 +34,8 @@ function App() {
     });
   };
 
-  // retrieve todos from db
+  // retrieve todos from db also get latest data based on data update to
+  // the specified database location
   useEffect(() => {
     const todosRef = ref(database, '/todos');
 
@@ -43,6 +47,17 @@ function App() {
       }
     })
   }, []);
+
+  // fetch data only once without observer
+  // useEffect(() => {
+  //   const dbRef = ref(database);
+
+  //   get(child(dbRef, '/todos')).then((snapshot) => {
+  //     if(snapshot.exists()) {
+  //       setTodos(Object.values(snapshot.val()));
+  //     }
+  //   })
+  // }, []);
 
   return (
     <div>
@@ -57,9 +72,10 @@ function App() {
       {/* todos list */}
       <ul>
         {todos.map((todo) => (
-          <div style={{ display: "flex", gap: "10px" }}>
-            <li>{todo.title}</li>
-          </div>
+          <li key={todo.id} style={{ display: "flex", gap: "10px" }}>
+            <input type="checkbox" checked={todo.isCompleted} onChange={(e) => console.log(e.target.checked)} />
+            <p>{todo.title}</p>
+          </li>
         ))}
       </ul>
     </div>
