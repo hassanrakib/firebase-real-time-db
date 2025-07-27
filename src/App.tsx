@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { child, get, onValue, push, ref, set } from "firebase/database";
+import { child, get, onValue, push, ref, set, update } from "firebase/database";
 import { database } from "./firebase.init";
 import { Link } from "react-router";
 
@@ -70,6 +70,18 @@ function App() {
   //   })
   // }, []);
 
+  const toggleIsCompleted = (id: number, isCompleted: boolean) => {
+    update(ref(database, '/posts'), {
+      [`/${id}/isCompleted`]: isCompleted,
+    }).then(() => {
+      if(isCompleted) {
+        alert('Congrats! Todo is completed!')
+      } else {
+        alert('Oh no! Try to complete it!');
+      }
+    })
+  }
+
   return (
     <div>
       <form onSubmit={addNew}>
@@ -87,7 +99,7 @@ function App() {
             <input
               type="checkbox"
               checked={todo.isCompleted}
-              onChange={(e) => console.log(e.target.checked)}
+              onChange={(e) => toggleIsCompleted(todo.id, e.target.checked)}
             />
             <p>{todo.title}</p>
             <Link to={`/todos/edit/${todo.id}`}>Edit</Link>

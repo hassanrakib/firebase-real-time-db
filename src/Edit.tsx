@@ -1,4 +1,4 @@
-import { onValue, ref, set } from "firebase/database";
+import { onValue, ref, update } from "firebase/database";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { database } from "./firebase.init";
@@ -26,7 +26,7 @@ export default function Edit() {
   const updateTodo = () => {
     const todoRef = ref(database, `/todos/${id}`);
 
-    set(todoRef, {
+    update(todoRef, {
       title,
       isCompleted,
     }).then(() => {
