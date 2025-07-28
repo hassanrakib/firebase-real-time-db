@@ -3,6 +3,7 @@ import {
   child,
   get,
   off,
+  onChildAdded,
   onValue,
   push,
   ref,
@@ -51,24 +52,45 @@ function App() {
       });
   };
 
-  // retrieve todos from db also get latest data based on data update to
-  // the specified database location
+  // retrieve todos from db only once
+  // or whenever authContext changes
   useEffect(() => {
     const todosRef = ref(database, `/todos/${authContext?.user?.uid}`);
 
     // event listener to the todosRef
-    onValue(todosRef, (snapshot) => {
-      // if there are data
-      if (snapshot.exists()) {
-        setTodos(Object.values(snapshot.val()));
-      } else {
-        setTodos([]);
-      }
-    });
+    onValue(
+      todosRef,
+      (snapshot) => {
+        // if there are data
+        if (snapshot.exists()) {
+          setTodos(Object.values(snapshot.val()));
+        } else {
+          setTodos([]);
+        }
+      },
+      // { onlyOnce: true }
+    );
 
     // remove value listener
-    return () => off(todosRef, 'value');
+    return () => off(todosRef, "value");
   }, [authContext]);
+
+  // // add child event listeners to listen to changes
+  // useEffect(() => {
+  //   const todosRef = ref(database, `/todos/${authContext?.user?.uid}`);
+
+  //   // listen to child add
+  //   onChildAdded(todosRef, (addedTodo) => {
+  //     const todo: Todo = {
+  //       id: addedTodo.key!,
+  //       title: addedTodo.val().title,
+  //       isCompleted: addedTodo.val().isCompleted,
+  //     };
+  //     setTodos((todos) => [...todos, todo]);
+  //   });
+
+  //   return () => off(todosRef, 'child_added');
+  // }, [authContext]);
 
   // fetch data only once without observer
   // useEffect(() => {
