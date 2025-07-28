@@ -1,11 +1,7 @@
-// firebase initializeApp function
-import { initializeApp } from "firebase/app";
-
-// firebase real time database sdk
-import { getDatabase } from "firebase/database";
-
-// firebase auth sdk
-import { getAuth } from "firebase/auth";
+import firebase from "firebase/app";
+import "firebase/auth";
+import "firebase/database";
+import "firebase/firestore";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -20,11 +16,11 @@ const firebaseConfig = {
   databaseURL: "https://realtime-dbx-default-rtdb.firebaseio.com/",
 };
 
-// Initialize Firebase
-export const app = initializeApp(firebaseConfig);
+// initialize firebase
+firebase.initializeApp(firebaseConfig);
 
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
+export const auth = firebase.auth();
+export const db = firebase.database();
+export const firestoreDB = firebase.firestore();
 
-// Initialize Realtime Database and get a reference to the service
-export const database = getDatabase(app);
+export default firebase;

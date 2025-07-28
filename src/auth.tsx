@@ -6,14 +6,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  type UserCredential,
-} from "firebase/auth";
 import { auth } from "./firebase";
+import firebase from "./firebase";
 
 export interface User {
   uid: string;
@@ -23,7 +17,7 @@ export interface User {
 export interface IAuthContext {
   user: User | null;
   isUserLoading: boolean;
-  login: () => Promise<UserCredential>;
+  login: () => Promise<firebase.auth.UserCredential>;
   logout: () => Promise<void>;
 }
 
@@ -31,7 +25,7 @@ export interface IAuthContext {
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<IAuthContext | null>(null);
 
-const provider = new GoogleAuthProvider();
+const provider = new firebase.auth.GoogleAuthProvider();
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   // user state
@@ -41,12 +35,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(() => {
     setIsUserLoading(true);
-    return signInWithPopup(auth, provider);
+    return auth.signInWithPopup(provider);
   }, []);
 
   const logout = useCallback(() => {
     setIsUserLoading(true);
-    return signOut(auth);
+    return auth.signOut();
   }, []);
 
   const contextValue = useMemo(() => {
@@ -59,7 +53,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, isUserLoading, login, logout]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user?.email) {
         setUser({ uid: user.uid, email: user.email });
       } else {

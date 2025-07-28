@@ -1,7 +1,6 @@
-import { onValue, ref, update } from "firebase/database";
 import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { database } from "./firebase";
+import { db } from "./firebase";
 import { AuthContext } from "./auth";
 
 export default function Edit() {
@@ -13,9 +12,7 @@ export default function Edit() {
   const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
-    const todoRef = ref(database, `/todos/${authContext?.user?.uid}/${id}`);
-
-    onValue(todoRef, (snapshot) => {
+    db.ref(`/todos/${authContext?.user?.uid}/${id}`).on("value", (snapshot) => {
       if (snapshot.exists()) {
         const todo = snapshot.val();
 
@@ -26,15 +23,16 @@ export default function Edit() {
   }, [authContext, id]);
 
   // update todo
-  const updateTodo = () => {
-    const todoRef = ref(database, `/todos/${authContext?.user?.uid}/${id}`);
-
-    update(todoRef, {
-      title,
-      isCompleted,
-    }).then(() => {
+  const updateTodo = async () => {
+    try {
+      await db.ref(`/todos/${authContext?.user?.uid}/${id}`).update({
+        title,
+        isCompleted,
+      });
       alert("Todo updated successfully!");
-    });
+    } catch (error: unknown) {
+      console.log((error as Error).message);
+    }
   };
 
   return (
@@ -51,7 +49,9 @@ export default function Edit() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <button type="button" onClick={updateTodo}>Update</button>
+        <button type="button" onClick={async () => await updateTodo()}>
+          Update
+        </button>
       </form>
     </div>
   );

@@ -1,17 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import {
-  child,
-  get,
-  off,
-  onChildAdded,
-  onValue,
-  push,
-  ref,
-  remove,
-  set,
-  update,
-} from "firebase/database";
-import { database } from "./firebase";
+import { db, firestoreDB } from "./firebase";
 import { Link } from "react-router";
 import { AuthContext } from "./auth";
 
@@ -28,104 +16,153 @@ function App() {
 
   const [todos, setTodos] = useState<Todo[]>([]);
 
-  // add new todo
-  const addNew = (e: React.FormEvent<HTMLFormElement>) => {
+  const [filter, setFilter] = useState<"all" | "completed" | "incomplete">(
+    "all"
+  );
+
+  // add new todo (using firebase realtime database)
+  // const addNew = async (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+
+  //   try {
+  //     // create a reference to write at this db location
+  //     const todoRef = db.ref(`todos/${authContext?.user?.uid}`).push();
+
+  //     // save to db
+  //     await todoRef.set({
+  //       id: todoRef.key,
+  //       title,
+  //       isCompleted: false,
+  //     });
+  //     alert("Todo is created successfully!");
+  //   } catch (error: unknown) {
+  //     alert(`Error: ${(error as Error).message}!!`);
+  //   }
+  // };
+
+  // add new todo (using firebase firestore)
+  const addNew = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    try {
+      const todoRef = firestoreDB
+        .collection("todos")
+        .doc(authContext?.user?.uid)
+        .collection("items")
+        .doc();
 
-    // save to db
-    // push creates a new unique id for every todo
-    // so its like /todos/:uid/:todoId
-    const todoRef = push(
-      child(ref(database), `/todos/${authContext?.user?.uid}`)
-    );
-
-    set(todoRef, {
-      id: todoRef.key,
-      title,
-      isCompleted: false,
-    })
-      .then(() => {
-        alert("Todo is created successfully!");
-      })
-      .catch((error: Error) => {
-        alert(`Error: ${error.message}!!`);
+      todoRef.set({
+        id: todoRef.id,
+        title,
+        isCompleted: false,
       });
+
+      alert("Todo is created successfully!");
+    } catch (error: unknown) {
+      alert((error as Error).message);
+    }
   };
 
-  // retrieve todos from db only once
-  // or whenever authContext changes
-  useEffect(() => {
-    const todosRef = ref(database, `/todos/${authContext?.user?.uid}`);
-
-    // event listener to the todosRef
-    onValue(
-      todosRef,
-      (snapshot) => {
-        // if there are data
-        if (snapshot.exists()) {
-          setTodos(Object.values(snapshot.val()));
-        } else {
-          setTodos([]);
-        }
-      },
-      // { onlyOnce: true }
-    );
-
-    // remove value listener
-    return () => off(todosRef, "value");
-  }, [authContext]);
-
-  // // add child event listeners to listen to changes
+  // // retrieve todos from db (using realtime database)
   // useEffect(() => {
-  //   const todosRef = ref(database, `/todos/${authContext?.user?.uid}`);
+  //   const todosRef = db.ref(`/todos/${authContext?.user?.uid}`);
 
-  //   // listen to child add
-  //   onChildAdded(todosRef, (addedTodo) => {
-  //     const todo: Todo = {
-  //       id: addedTodo.key!,
-  //       title: addedTodo.val().title,
-  //       isCompleted: addedTodo.val().isCompleted,
-  //     };
-  //     setTodos((todos) => [...todos, todo]);
+  //   let todosQuery;
+
+  //   if (filter === "incomplete") {
+  //     todosQuery = todosRef.orderByChild("isCompleted").equalTo(false);
+  //   } else if (filter === "completed") {
+  //     todosQuery = todosRef.orderByChild("isCompleted").equalTo(true);
+  //   } else {
+  //     todosQuery = todosRef;
+  //   }
+
+  //   // event listener to the todosQuery
+  //   todosQuery.on("value", (snapshot) => {
+  //     // if there are data
+  //     if (snapshot.exists()) {
+  //       setTodos(Object.values(snapshot.val()));
+  //     } else {
+  //       setTodos([]);
+  //     }
   //   });
 
-  //   return () => off(todosRef, 'child_added');
-  // }, [authContext]);
+  //   // remove value listener
+  //   return () => todosRef.off("value");
+  // }, [authContext, filter]);
 
-  // fetch data only once without observer
-  // useEffect(() => {
-  //   const dbRef = ref(database);
+  // using firestore to retrieve the entire collection
 
-  //   get(child(dbRef, '/todos')).then((snapshot) => {
-  //     if(snapshot.exists()) {
-  //       setTodos(Object.values(snapshot.val()));
-  //     }
-  //   })
-  // }, []);
+  // fetch todos (using firebase firestore)
+  useEffect(() => {
+    const fetchTodos = async () => {
+      const querySnapshot = await firestoreDB
+        .collection("todos")
+        .doc(authContext?.user?.uid)
+        .collection("items")
+        .get();
 
-  const toggleIsCompleted = (id: string, isCompleted: boolean) => {
-    update(ref(database, `/todos/${authContext?.user?.uid}`), {
-      // update by specifying path for the nested keys
-      [`${id}/isCompleted`]: isCompleted,
-    }).then(() => {
-      if (isCompleted) {
-        alert("Congrats! Todo is completed!");
-      } else {
-        alert("Oh no! Try to complete it!");
-      }
-    });
+      const todos = querySnapshot.docs.map((doc) => doc.data() as Todo);
+
+      setTodos(todos);
+    };
+
+    fetchTodos();
+  }, [authContext]);
+
+  // update isCompleted state (using firebase realtime database);
+  // const toggleIsCompleted = async (id: string, isCompleted: boolean) => {
+  //   try {
+  //     await db.ref(`todos/${authContext?.user?.uid}`).update({
+  //       [`${id}/isCompleted`]: isCompleted,
+  //     });
+  //     alert("Congrats! Todo is completed!");
+  //   } catch (error: unknown) {
+  //     console.log((error as Error).message);
+  //     alert("Oh no! Try to complete it!");
+  //   }
+  // };
+
+  // update isCompleted state (using firebase firestore)
+  const toggleIsCompleted = async (id: string, isCompleted: boolean) => {
+    try {
+
+      await firestoreDB.collection("todos").doc(authContext?.user?.uid).collection("items").doc(id).update({
+        isCompleted,
+      });
+
+      alert("Congrats! Todo is completed!");
+    } catch (error: unknown) {
+      console.log((error as Error).message);
+      alert("Oh no! Try to complete it!");
+    }
   };
 
   // handle delete button
-  const handleDelete = (id: string) => {
-    remove(ref(database, `/todos/${authContext?.user?.uid}/${id}`)).then(() => {
+  const handleDelete = async (id: string) => {
+    try {
+      await db.ref(`/todos/${authContext?.user?.uid}/${id}`).remove();
       alert("Todo is deleted!");
+    } catch (error: unknown) {
+      console.log((error as Error).message);
+    }
+  };
+
+  // filter incomplete todos
+  const toggleFilter = () => {
+    setFilter((filter) => {
+      if (filter === "all") {
+        return "incomplete";
+      } else if (filter === "incomplete") {
+        return "completed";
+      } else {
+        return "all";
+      }
     });
   };
 
   return (
     <div>
-      <form onSubmit={addNew}>
+      <form onSubmit={async (e) => await addNew(e)}>
         <input
           type="text"
           value={title}
@@ -133,6 +170,12 @@ function App() {
         />
         <button type="submit">Add New</button>
       </form>
+      {/* filter todos */}
+      <div style={{ margin: "30px 0" }}>
+        <button onClick={toggleFilter}>
+          Showing {filter.toUpperCase()} Todos. Click to change filtering
+        </button>
+      </div>
       {/* todos list */}
       <ul>
         {todos.map((todo) => (
@@ -143,11 +186,15 @@ function App() {
             <input
               type="checkbox"
               checked={todo.isCompleted}
-              onChange={(e) => toggleIsCompleted(todo.id, e.target.checked)}
+              onChange={async (e) =>
+                await toggleIsCompleted(todo.id, e.target.checked)
+              }
             />
             <p>{todo.title}</p>
             <Link to={`/todos/edit/${todo.id}`}>Edit</Link>
-            <button onClick={() => handleDelete(todo.id)}>Delete</button>
+            <button onClick={async () => await handleDelete(todo.id)}>
+              Delete
+            </button>
           </li>
         ))}
       </ul>
