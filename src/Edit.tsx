@@ -1,16 +1,19 @@
 import { onValue, ref, update } from "firebase/database";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { database } from "./firebase";
+import { AuthContext } from "./auth";
 
 export default function Edit() {
   const { id } = useParams();
+
+  const authContext = useContext(AuthContext);
 
   const [title, setTitle] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
-    const todoRef = ref(database, `/todos/${id}`);
+    const todoRef = ref(database, `/todos/${authContext?.user?.uid}/${id}`);
 
     onValue(todoRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -20,11 +23,11 @@ export default function Edit() {
         setIsCompleted(todo.isCompleted);
       }
     });
-  }, [id]);
+  }, [authContext, id]);
 
   // update todo
   const updateTodo = () => {
-    const todoRef = ref(database, `/todos/${id}`);
+    const todoRef = ref(database, `/todos/${authContext?.user?.uid}/${id}`);
 
     update(todoRef, {
       title,

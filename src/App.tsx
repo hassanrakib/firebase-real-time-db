@@ -1,15 +1,28 @@
-import { useEffect, useState } from "react";
-import { child, get, onValue, push, ref, set, update } from "firebase/database";
+import { useContext, useEffect, useState } from "react";
+import {
+  child,
+  get,
+  off,
+  onValue,
+  push,
+  ref,
+  remove,
+  set,
+  update,
+} from "firebase/database";
 import { database } from "./firebase";
 import { Link } from "react-router";
+import { AuthContext } from "./auth";
 
 export interface Todo {
-  id: number;
+  id: string;
   title: string;
   isCompleted: boolean;
 }
 
 function App() {
+  const authContext = useContext(AuthContext);
+
   const [title, setTitle] = useState("");
 
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -17,14 +30,16 @@ function App() {
   // add new todo
   const addNew = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // setTodos((todos) => [...todos, { id: todos.length + 1, title, isCompleted: false }]);
 
     // save to db
-    // push creates a new unique id for every todo after todos folder
-    // so its like /todos/:uid
-    const todoRef = push(ref(database, "/todos"));
+    // push creates a new unique id for every todo
+    // so its like /todos/:uid/:todoId
+    const todoRef = push(
+      child(ref(database), `/todos/${authContext?.user?.uid}`)
+    );
 
     set(todoRef, {
+      id: todoRef.key,
       title,
       isCompleted: false,
     })
@@ -39,25 +54,21 @@ function App() {
   // retrieve todos from db also get latest data based on data update to
   // the specified database location
   useEffect(() => {
-    const todosRef = ref(database, "/todos");
+    const todosRef = ref(database, `/todos/${authContext?.user?.uid}`);
 
     // event listener to the todosRef
     onValue(todosRef, (snapshot) => {
       // if there are data
       if (snapshot.exists()) {
-        // get todos with unique ids
-        const todosWithUniqueIds = snapshot.val();
-
-        // grab the unique id for every todo and put it inside the todo
-        const todos = Object.keys(todosWithUniqueIds).map((id) => ({
-          id,
-          ...todosWithUniqueIds[id],
-        }));
-
-        setTodos(todos);
+        setTodos(Object.values(snapshot.val()));
+      } else {
+        setTodos([]);
       }
     });
-  }, []);
+
+    // remove value listener
+    return () => off(todosRef, 'value');
+  }, [authContext]);
 
   // fetch data only once without observer
   // useEffect(() => {
@@ -70,17 +81,25 @@ function App() {
   //   })
   // }, []);
 
-  const toggleIsCompleted = (id: number, isCompleted: boolean) => {
-    update(ref(database, '/posts'), {
-      [`/${id}/isCompleted`]: isCompleted,
+  const toggleIsCompleted = (id: string, isCompleted: boolean) => {
+    update(ref(database, `/todos/${authContext?.user?.uid}`), {
+      // update by specifying path for the nested keys
+      [`${id}/isCompleted`]: isCompleted,
     }).then(() => {
-      if(isCompleted) {
-        alert('Congrats! Todo is completed!')
+      if (isCompleted) {
+        alert("Congrats! Todo is completed!");
       } else {
-        alert('Oh no! Try to complete it!');
+        alert("Oh no! Try to complete it!");
       }
-    })
-  }
+    });
+  };
+
+  // handle delete button
+  const handleDelete = (id: string) => {
+    remove(ref(database, `/todos/${authContext?.user?.uid}/${id}`)).then(() => {
+      alert("Todo is deleted!");
+    });
+  };
 
   return (
     <div>
@@ -95,7 +114,10 @@ function App() {
       {/* todos list */}
       <ul>
         {todos.map((todo) => (
-          <li key={todo.id} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <li
+            key={todo.id}
+            style={{ display: "flex", gap: "10px", alignItems: "center" }}
+          >
             <input
               type="checkbox"
               checked={todo.isCompleted}
@@ -103,6 +125,7 @@ function App() {
             />
             <p>{todo.title}</p>
             <Link to={`/todos/edit/${todo.id}`}>Edit</Link>
+            <button onClick={() => handleDelete(todo.id)}>Delete</button>
           </li>
         ))}
       </ul>
