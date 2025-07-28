@@ -95,11 +95,22 @@ function App() {
   // fetch todos (using firebase firestore)
   useEffect(() => {
     const fetchTodos = async () => {
-      const querySnapshot = await firestoreDB
+      const todosRef = firestoreDB
         .collection("todos")
         .doc(authContext?.user?.uid)
-        .collection("items")
-        .get();
+        .collection("items");
+
+      let todosQuery;
+
+      if (filter === "incomplete") {
+        todosQuery = todosRef.where("isCompleted", "==", false);
+      } else if (filter === "completed") {
+        todosQuery = todosRef.where("isCompleted", "==", true);
+      } else {
+        todosQuery = todosRef;
+      }
+
+      const querySnapshot = await todosQuery.get();
 
       const todos = querySnapshot.docs.map((doc) => doc.data() as Todo);
 
@@ -107,7 +118,7 @@ function App() {
     };
 
     fetchTodos();
-  }, [authContext]);
+  }, [authContext, filter]);
 
   // update isCompleted state (using firebase realtime database);
   // const toggleIsCompleted = async (id: string, isCompleted: boolean) => {
@@ -125,10 +136,14 @@ function App() {
   // update isCompleted state (using firebase firestore)
   const toggleIsCompleted = async (id: string, isCompleted: boolean) => {
     try {
-
-      await firestoreDB.collection("todos").doc(authContext?.user?.uid).collection("items").doc(id).update({
-        isCompleted,
-      });
+      await firestoreDB
+        .collection("todos")
+        .doc(authContext?.user?.uid)
+        .collection("items")
+        .doc(id)
+        .update({
+          isCompleted,
+        });
 
       alert("Congrats! Todo is completed!");
     } catch (error: unknown) {
