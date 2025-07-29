@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { db, firestoreDB } from "./firebase";
+import { firestoreDB } from "./firebase";
 import { Link } from "react-router";
 import { AuthContext } from "./auth";
 
@@ -94,30 +94,28 @@ function App() {
 
   // fetch todos (using firebase firestore)
   useEffect(() => {
-    const fetchTodos = async () => {
-      const todosRef = firestoreDB
-        .collection("todos")
-        .doc(authContext?.user?.uid)
-        .collection("items");
+    const todosRef = firestoreDB
+      .collection("todos")
+      .doc(authContext?.user?.uid)
+      .collection("items");
 
-      let todosQuery;
+    let todosQuery;
 
-      if (filter === "incomplete") {
-        todosQuery = todosRef.where("isCompleted", "==", false);
-      } else if (filter === "completed") {
-        todosQuery = todosRef.where("isCompleted", "==", true);
-      } else {
-        todosQuery = todosRef;
-      }
+    if (filter === "incomplete") {
+      todosQuery = todosRef.where("isCompleted", "==", false);
+    } else if (filter === "completed") {
+      todosQuery = todosRef.where("isCompleted", "==", true);
+    } else {
+      todosQuery = todosRef;
+    }
 
-      const querySnapshot = await todosQuery.get();
-
-      const todos = querySnapshot.docs.map((doc) => doc.data() as Todo);
+    const unsubscribe = todosQuery.onSnapshot((snapshot) => {
+      const todos = snapshot.docs.map((doc) => doc.data() as Todo);
 
       setTodos(todos);
-    };
+    });
 
-    fetchTodos();
+    return () => unsubscribe();
   }, [authContext, filter]);
 
   // update isCompleted state (using firebase realtime database);
@@ -152,11 +150,27 @@ function App() {
     }
   };
 
-  // handle delete button
+  // handle delete button (using firebase realtime database)
+  // const handleDelete = async (id: string) => {
+  //   try {
+  //     await db.ref(`/todos/${authContext?.user?.uid}/${id}`).remove();
+  //     alert("Todo is deleted!");
+  //   } catch (error: unknown) {
+  //     console.log((error as Error).message);
+  //   }
+  // };
+
+  // handle delete button (using firebase firestore)
   const handleDelete = async (id: string) => {
     try {
-      await db.ref(`/todos/${authContext?.user?.uid}/${id}`).remove();
-      alert("Todo is deleted!");
+      await firestoreDB
+        .collection("todos")
+        .doc(authContext?.user?.uid)
+        .collection("items")
+        .doc(id)
+        .delete();
+
+      alert("Todo is deleted");
     } catch (error: unknown) {
       console.log((error as Error).message);
     }
