@@ -23,6 +23,8 @@ const router = createBrowserRouter([
   },
 ]);
 
+// test git & github
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
